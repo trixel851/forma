@@ -107,7 +107,11 @@ cargo run -- mcp
 
 # Launch GUI (requires --features gui)
 cargo run --features gui -- gui
+```
 
+The desktop editor opens images into a preview workspace, suggests an edited PNG output name, supports quick exposure/contrast/saturation/vignette controls, operation history with undo/redo, and dark/light themes. Photoshop-style shortcuts use Ctrl on Windows/Linux and Cmd on macOS: `Ctrl/Cmd+O` focuses the input path, `Ctrl/Cmd+S` exports, `Ctrl/Cmd+Z` undoes, and `Ctrl/Cmd+Shift+Z` (or `Ctrl/Cmd+Y`) redoes. Large images are downscaled for responsive previews; export still applies operations at full resolution.
+
+```bash
 # ffmpeg helpers
 cargo run -- ffmpeg-extract-frame --input-video in.mp4 --output-image frame.png --timestamp 00:00:03
 cargo run -- ffmpeg-filter --input-video in.mp4 --output-video out.mp4 --vf "eq=contrast=1.15:saturation=1.2"
