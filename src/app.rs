@@ -15,14 +15,21 @@ pub fn run(command: Commands) -> Result<()> {
             ops,
             ai,
             copilot_suggest,
+            gpu,
         } => {
             let parsed_ops = ops
                 .iter()
                 .map(|op| parse_operation(op))
                 .collect::<Result<Vec<_>>>()?;
             let ai_preset = ai.as_deref().map(AiPreset::parse).transpose()?;
-            let effective =
-                apply_pipeline(&input, &output, &parsed_ops, ai_preset, copilot_suggest)?;
+            let effective = apply_pipeline(
+                &input,
+                &output,
+                &parsed_ops,
+                ai_preset,
+                copilot_suggest,
+                gpu,
+            )?;
             println!(
                 "Saved {} with {} operation(s): {}",
                 output.display(),

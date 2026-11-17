@@ -1,4 +1,6 @@
 mod ai;
+#[cfg(feature = "gpu")]
+mod gpu;
 mod io;
 mod ops;
 mod parser;

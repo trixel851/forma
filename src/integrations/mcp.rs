@@ -82,7 +82,8 @@ fn handle_rpc(req: RpcRequest) -> RpcResponse {
                                 "output": { "type": "string" },
                                 "ops": { "type": "array", "items": { "type": "string" } },
                                 "ai": { "type": "string" },
-                                "copilot_suggest": { "type": "boolean" }
+                                "copilot_suggest": { "type": "boolean" },
+                                "gpu": { "type": "boolean" }
                             },
                             "required": ["input", "output"]
                         }
@@ -170,8 +171,9 @@ fn handle_rpc(req: RpcRequest) -> RpcResponse {
                         .get("copilot_suggest")
                         .and_then(Value::as_bool)
                         .unwrap_or(false);
+                    let gpu = args.get("gpu").and_then(Value::as_bool).unwrap_or(false);
 
-                    match apply_pipeline(&input, &output, &ops, ai, copilot_suggest) {
+                    match apply_pipeline(&input, &output, &ops, ai, copilot_suggest, gpu) {
                         Ok(effective) => rpc_ok(
                             req.id,
                             json!({

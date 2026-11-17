@@ -6,14 +6,18 @@ license = "MIT"
 description = "Freedom-first photo/video editor with CLI, GUI, MCP, PSD/RAW support, and ffmpeg workflows"
 
 [features]
-default = []
+default = ["gpu"]
 gui = ["dep:eframe", "dep:egui"]
+gpu = ["dep:bytemuck", "dep:pollster", "dep:wgpu"]
 
 [dependencies]
 anyhow = "1.0"
 clap = { version = "4.5", features = ["derive"] }
 image = "0.25"
+bytemuck = { version = "1.21", features = ["derive"], optional = true }
+pollster = { version = "0.3", optional = true }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 eframe = { version = "0.29", optional = true }
 egui = { version = "0.29", optional = true }
+wgpu = { version = "22", optional = true }

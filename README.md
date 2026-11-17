@@ -42,6 +42,26 @@ GitHub Actions also builds and tests the project on Windows, macOS, and Linux.
 
 To build directly with Cargo instead, use `cargo build --release --features gui`.
 
+## Install / uninstall
+
+The Python scripts install a per-user copy, create a native launcher (including desktop/start-menu entries where available), and do not require administrator privileges. If the release binary has not been built, the installer runs the host build script automatically.
+
+```bash
+python scripts/install.py
+python scripts/uninstall.py
+```
+
+On Windows PowerShell, use:
+
+```powershell
+py -3 scripts/install.py
+py -3 scripts/uninstall.py
+```
+
+The install locations are per-user: Linux uses `~/.local` and adds an SVG app icon, macOS installs `~/Applications/Forma.app` with a Desktop link when available, and Windows installs under `%LOCALAPPDATA%\Programs\Forma` with Start Menu and Desktop shortcuts.
+
+The installer supports `--binary PATH` to install an existing executable. It refuses to overwrite conflicting files by default; `--force` permits replacing files at forma's dedicated install paths. The uninstaller verifies the installed executable and removes only managed files, leaving modified files and non-empty directories in place.
+
 ## Project structure
 
 The app is now modular (not a single giant `main.rs`):
@@ -98,6 +118,8 @@ cargo run -- ffmpeg-filter --input-video in.mp4 --output-video out.mp4 --vf "eq=
 - `grayscale`
 - `invert`
 - `autolevels`
+- `exposure:<EV>` (for example `exposure:1.0`)
+- `vignette:<0..1>` (for example `vignette:0.35`)
 - `brighten:<int>`
 - `contrast:<float>`
 - `blur:<float>`
@@ -120,6 +142,17 @@ Resize filters: `nearest`, `triangle`, `catmullrom`, `gaussian`, `lanczos3`
 - `copilot-smart`
 
 These run locally as deterministic operation stacks.
+
+## GPU acceleration
+
+The default build includes a `wgpu` compute path. Add `--gpu` to a photo pipeline to run supported per-pixel operations on the best available GPU adapter; other operations in the same pipeline continue on the CPU. Supported operations include grayscale, invert, brighten, contrast, saturation, gamma, exposure, and vignette. If no compatible GPU is available, the command reports the error rather than silently claiming acceleration.
+
+```bash
+cargo run -- cli --input in.jpg --output out.jpg --gpu \
+  --op exposure:0.7 --op saturate:1.15 --op vignette:0.3
+```
+
+Build without the GPU dependencies with `cargo build --no-default-features`; in that build, use of `--gpu` returns an explanatory error.
 
 ## PSD and RAW handling
 
