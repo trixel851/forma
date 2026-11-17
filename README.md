@@ -42,6 +42,26 @@ GitHub Actions also builds and tests the project on Windows, macOS, and Linux.
 
 To build directly with Cargo instead, use `cargo build --release --features gui`.
 
+## Install / uninstall
+
+The Python scripts install a per-user copy, create a native launcher (including desktop/start-menu entries where available), and do not require administrator privileges. If the release binary has not been built, the installer runs the host build script automatically.
+
+```bash
+python scripts/install.py
+python scripts/uninstall.py
+```
+
+On Windows PowerShell, use:
+
+```powershell
+py -3 scripts/install.py
+py -3 scripts/uninstall.py
+```
+
+The install locations are per-user: Linux uses `~/.local` and adds an SVG app icon, macOS installs `~/Applications/Forma.app` with a Desktop link when available, and Windows installs under `%LOCALAPPDATA%\Programs\Forma` with Start Menu and Desktop shortcuts.
+
+The installer supports `--binary PATH` to install an existing executable. It refuses to overwrite conflicting files by default; `--force` permits replacing files at forma's dedicated install paths. The uninstaller verifies the installed executable and removes only managed files, leaving modified files and non-empty directories in place.
+
 ## Project structure
 
 The app is now modular (not a single giant `main.rs`):
