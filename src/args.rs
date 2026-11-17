@@ -26,6 +26,9 @@ pub enum Commands {
         ai: Option<String>,
         #[arg(long)]
         copilot_suggest: bool,
+        /// Run supported pixel adjustments on a GPU (requires a compatible adapter)
+        #[arg(long)]
+        gpu: bool,
     },
     /// Advanced video editing pipeline powered by ffmpeg
     Video {

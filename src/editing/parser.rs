@@ -78,10 +78,30 @@ pub fn parse_operation(value: &str) -> Result<Operation> {
                 .ok_or_else(|| anyhow!("missing gamma value"))?
                 .parse::<f32>()
                 .map_err(|_| anyhow!("gamma must be a number"))?;
-            if gamma <= 0.0 {
+            if !gamma.is_finite() || gamma <= 0.0 {
                 return Err(anyhow!("gamma must be > 0"));
             }
             Ok(Operation::Gamma(gamma))
+        }
+        "exposure" => {
+            let ev = payload
+                .ok_or_else(|| anyhow!("missing exposure value"))?
+                .parse::<f32>()
+                .map_err(|_| anyhow!("exposure must be a number"))?;
+            if !ev.is_finite() || !(-16.0..=16.0).contains(&ev) {
+                return Err(anyhow!("exposure must be between -16 and 16 EV"));
+            }
+            Ok(Operation::Exposure(ev))
+        }
+        "vignette" => {
+            let strength = payload
+                .ok_or_else(|| anyhow!("missing vignette strength"))?
+                .parse::<f32>()
+                .map_err(|_| anyhow!("vignette strength must be a number"))?;
+            if !strength.is_finite() || !(0.0..=1.0).contains(&strength) {
+                return Err(anyhow!("vignette strength must be between 0 and 1"));
+            }
+            Ok(Operation::Vignette(strength))
         }
         "unsharpen" => {
             let nums = parse_csv_numbers::<f32>(
@@ -175,5 +195,15 @@ mod tests {
     fn rejects_bad_crop_shape() {
         let err = parse_operation("crop:10,20,30").expect_err("bad crop should fail");
         assert!(err.to_string().contains("crop expects 4"));
+    }
+
+    #[test]
+    fn validates_exposure_and_vignette_ranges() {
+        assert!(parse_operation("exposure:17").is_err());
+        assert!(parse_operation("vignette:-0.1").is_err());
+        assert_eq!(
+            parse_operation("exposure:-1.5").expect("valid exposure"),
+            Operation::Exposure(-1.5)
+        );
     }
 }

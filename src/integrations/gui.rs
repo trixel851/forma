@@ -13,6 +13,7 @@ pub fn run_gui(initial: Option<PathBuf>) -> Result<()> {
         ops_multiline: String,
         ai: String,
         copilot: bool,
+        gpu: bool,
         status: String,
     }
 
@@ -35,6 +36,7 @@ pub fn run_gui(initial: Option<PathBuf>) -> Result<()> {
                     ui.text_edit_singleline(&mut self.ai);
                 });
                 ui.checkbox(&mut self.copilot, "Apply Copilot smart suggestion");
+                ui.checkbox(&mut self.gpu, "Use GPU for supported pixel effects");
 
                 ui.add(
                     egui::TextEdit::multiline(&mut self.ops_multiline)
@@ -66,6 +68,7 @@ pub fn run_gui(initial: Option<PathBuf>) -> Result<()> {
                             &ops,
                             ai,
                             self.copilot,
+                            self.gpu,
                         )
                     });
 
@@ -112,6 +115,7 @@ pub fn run_gui(initial: Option<PathBuf>) -> Result<()> {
         ops_multiline: "autolevels\ncontrast:8\nsaturate:1.1".to_string(),
         ai: "enhance".to_string(),
         copilot: false,
+        gpu: false,
         status: "Ready.".to_string(),
     };
 

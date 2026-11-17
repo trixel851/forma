@@ -98,6 +98,8 @@ cargo run -- ffmpeg-filter --input-video in.mp4 --output-video out.mp4 --vf "eq=
 - `grayscale`
 - `invert`
 - `autolevels`
+- `exposure:<EV>` (for example `exposure:1.0`)
+- `vignette:<0..1>` (for example `vignette:0.35`)
 - `brighten:<int>`
 - `contrast:<float>`
 - `blur:<float>`
@@ -120,6 +122,17 @@ Resize filters: `nearest`, `triangle`, `catmullrom`, `gaussian`, `lanczos3`
 - `copilot-smart`
 
 These run locally as deterministic operation stacks.
+
+## GPU acceleration
+
+The default build includes a `wgpu` compute path. Add `--gpu` to a photo pipeline to run supported per-pixel operations on the best available GPU adapter; other operations in the same pipeline continue on the CPU. Supported operations include grayscale, invert, brighten, contrast, saturation, gamma, exposure, and vignette. If no compatible GPU is available, the command reports the error rather than silently claiming acceleration.
+
+```bash
+cargo run -- cli --input in.jpg --output out.jpg --gpu \
+  --op exposure:0.7 --op saturate:1.15 --op vignette:0.3
+```
+
+Build without the GPU dependencies with `cargo build --no-default-features`; in that build, use of `--gpu` returns an explanatory error.
 
 ## PSD and RAW handling
 
