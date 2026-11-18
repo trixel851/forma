@@ -4,7 +4,8 @@ use std::path::PathBuf;
 #[cfg(feature = "gui")]
 pub fn run_gui(initial: Option<PathBuf>) -> Result<()> {
     use crate::editing::{
-        AiPreset, Operation, ai_operations, apply_operation, apply_pipeline,
+        AiPreset, Operation, PluginInfo, ai_operations, apply_operation,
+        apply_pipeline_with_plugins, apply_plugins, list_plugins,
         load_image_with_psd_and_raw_support, parse_operation, recommend_copilot_pipeline,
     };
     use eframe::egui;
@@ -27,6 +28,8 @@ pub fn run_gui(initial: Option<PathBuf>) -> Result<()> {
         operation_input: String,
         operations: Vec<String>,
         redo: Vec<String>,
+        plugins: Vec<PluginInfo>,
+        enabled_plugins: Vec<String>,
         ai: String,
         copilot: bool,
         gpu: bool,
@@ -104,6 +107,7 @@ pub fn run_gui(initial: Option<PathBuf>) -> Result<()> {
                 for operation in operations {
                     image = apply_operation(image, &operation)?;
                 }
+                image = apply_plugins(image, &self.enabled_plugins, &[])?;
                 Ok::<_, anyhow::Error>(image)
             })();
             match preview {
@@ -175,7 +179,7 @@ pub fn run_gui(initial: Option<PathBuf>) -> Result<()> {
                 } else {
                     Some(AiPreset::parse(self.ai.trim())?)
                 };
-                apply_pipeline(
+                apply_pipeline_with_plugins(
                     Path::new(&self.input),
                     Path::new(&self.output),
                     &operations
@@ -185,6 +189,8 @@ pub fn run_gui(initial: Option<PathBuf>) -> Result<()> {
                     ai,
                     self.copilot,
                     self.gpu,
+                    &self.enabled_plugins,
+                    &[],
                 )
             });
             self.status = match result {
@@ -231,6 +237,22 @@ pub fn run_gui(initial: Option<PathBuf>) -> Result<()> {
             self.operations.extend(suggested);
             self.redo.clear();
             self.refresh_preview(ctx);
+        }
+
+        fn reload_plugins(&mut self, ctx: &egui::Context) {
+            match list_plugins(&[]) {
+                Ok(plugins) => {
+                    let ids = plugins
+                        .iter()
+                        .map(|plugin| plugin.id.clone())
+                        .collect::<std::collections::BTreeSet<_>>();
+                    self.enabled_plugins.retain(|id| ids.contains(id));
+                    self.plugins = plugins;
+                    self.refresh_preview(ctx);
+                    self.status = format!("Loaded {} JavaScript plugin(s).", self.plugins.len());
+                }
+                Err(error) => self.status = format!("Plugin discovery failed: {error:#}"),
+            }
         }
 
         fn quick_operations(&self) -> Vec<Operation> {
@@ -407,6 +429,33 @@ pub fn run_gui(initial: Option<PathBuf>) -> Result<()> {
                     }
 
                     ui.separator();
+                    ui.horizontal(|ui| {
+                        ui.heading("JavaScript plugins");
+                        if ui.button("Reload").clicked() {
+                            self.reload_plugins(ctx);
+                        }
+                    });
+                    for plugin in self.plugins.clone() {
+                        let mut enabled = self.enabled_plugins.contains(&plugin.id);
+                        if ui.checkbox(
+                            &mut enabled,
+                            format!("{} ({})", plugin.name, plugin.id),
+                        )
+                        .changed()
+                        {
+                            if enabled {
+                                self.enabled_plugins.push(plugin.id.clone());
+                            } else {
+                                self.enabled_plugins.retain(|id| id != &plugin.id);
+                            }
+                            self.refresh_preview(ctx);
+                        }
+                    }
+                    if self.plugins.is_empty() {
+                        ui.small("Add .js plugins to the plugins folder, then reload.");
+                    }
+
+                    ui.separator();
                     ui.heading(format!("History ({})", self.operations.len()));
                     egui::ScrollArea::vertical()
                         .max_height(150.0)
@@ -448,6 +497,10 @@ pub fn run_gui(initial: Option<PathBuf>) -> Result<()> {
         .as_deref()
         .map(|path| suggested_output(path))
         .unwrap_or_default();
+    let (plugins, plugin_status) = match list_plugins(&[]) {
+        Ok(plugins) => (plugins, "Open an image to start editing.".to_string()),
+        Err(error) => (Vec::new(), format!("Plugin discovery failed: {error:#}")),
+    };
     let app = FormaGui {
         input: initial
             .map(|path| path.to_string_lossy().to_string())
@@ -456,6 +509,8 @@ pub fn run_gui(initial: Option<PathBuf>) -> Result<()> {
         operation_input: String::new(),
         operations: Vec::new(),
         redo: Vec::new(),
+        plugins,
+        enabled_plugins: Vec::new(),
         ai: String::new(),
         copilot: false,
         gpu: false,
@@ -468,7 +523,7 @@ pub fn run_gui(initial: Option<PathBuf>) -> Result<()> {
         texture: None,
         preview_dirty: true,
         focus_input: false,
-        status: "Open an image to start editing.".to_string(),
+        status: plugin_status,
     };
 
     let native_options = eframe::NativeOptions::default();

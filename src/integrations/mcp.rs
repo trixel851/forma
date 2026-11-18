@@ -1,4 +1,7 @@
-use crate::editing::{AiPreset, apply_pipeline, parse_operation, recommend_copilot_pipeline};
+use crate::editing::{
+    AiPreset, apply_pipeline_with_plugins, list_plugins, parse_operation,
+    recommend_copilot_pipeline,
+};
 use crate::integrations::video::{VideoEditOptions, run_video_edit};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
@@ -83,7 +86,8 @@ fn handle_rpc(req: RpcRequest) -> RpcResponse {
                                 "ops": { "type": "array", "items": { "type": "string" } },
                                 "ai": { "type": "string" },
                                 "copilot_suggest": { "type": "boolean" },
-                                "gpu": { "type": "boolean" }
+                                "gpu": { "type": "boolean" },
+                                "plugins": { "type": "array", "items": { "type": "string" } }
                             },
                             "required": ["input", "output"]
                         }
@@ -96,6 +100,11 @@ fn handle_rpc(req: RpcRequest) -> RpcResponse {
                             "properties": { "input": { "type": "string" } },
                             "required": ["input"]
                         }
+                    },
+                    {
+                        "name": "list_plugins",
+                        "description": "List discovered JavaScript image plugins",
+                        "inputSchema": { "type": "object", "properties": {} }
                     },
                     {
                         "name": "video_edit",
@@ -172,13 +181,34 @@ fn handle_rpc(req: RpcRequest) -> RpcResponse {
                         .and_then(Value::as_bool)
                         .unwrap_or(false);
                     let gpu = args.get("gpu").and_then(Value::as_bool).unwrap_or(false);
+                    let plugins = args
+                        .get("plugins")
+                        .and_then(Value::as_array)
+                        .map(|items| {
+                            items
+                                .iter()
+                                .filter_map(Value::as_str)
+                                .map(ToString::to_string)
+                                .collect::<Vec<_>>()
+                        })
+                        .unwrap_or_default();
 
-                    match apply_pipeline(&input, &output, &ops, ai, copilot_suggest, gpu) {
+                    match apply_pipeline_with_plugins(
+                        &input,
+                        &output,
+                        &ops,
+                        ai,
+                        copilot_suggest,
+                        gpu,
+                        &plugins,
+                        &[],
+                    ) {
                         Ok(effective) => rpc_ok(
                             req.id,
                             json!({
                                 "output": output.to_string_lossy(),
-                                "operations": effective.iter().map(ToString::to_string).collect::<Vec<_>>()
+                                "operations": effective.iter().map(ToString::to_string).collect::<Vec<_>>(),
+                                "plugins": plugins
                             }),
                         ),
                         Err(err) => rpc_err(req.id, -32000, format!("{err:#}")),
@@ -199,6 +229,20 @@ fn handle_rpc(req: RpcRequest) -> RpcResponse {
                         Err(err) => rpc_err(req.id, -32000, format!("{err:#}")),
                     }
                 }
+                "list_plugins" => match list_plugins(&[]) {
+                    Ok(plugins) => rpc_ok(
+                        req.id,
+                        json!({
+                            "plugins": plugins.iter().map(|plugin| json!({
+                                "id": plugin.id,
+                                "name": plugin.name,
+                                "version": plugin.version,
+                                "path": plugin.path.to_string_lossy()
+                            })).collect::<Vec<_>>()
+                        }),
+                    ),
+                    Err(err) => rpc_err(req.id, -32000, format!("{err:#}")),
+                },
                 "video_edit" => {
                     let input = match args.get("input").and_then(Value::as_str) {
                         Some(v) => PathBuf::from(v),

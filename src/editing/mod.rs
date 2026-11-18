@@ -5,6 +5,7 @@ mod io;
 mod ops;
 mod parser;
 mod pipeline;
+mod plugins;
 
 #[cfg(feature = "gui")]
 pub use ai::ai_operations;
@@ -14,4 +15,7 @@ pub use ops::list_operations;
 #[cfg(feature = "gui")]
 pub use ops::{Operation, apply_operation};
 pub use parser::parse_operation;
-pub use pipeline::apply_pipeline;
+pub use pipeline::apply_pipeline_with_plugins;
+pub use plugins::list_plugins;
+#[cfg(feature = "gui")]
+pub use plugins::{PluginInfo, apply_plugins};

@@ -1,5 +1,7 @@
-use crate::args::Commands;
-use crate::editing::{AiPreset, apply_pipeline, list_operations, parse_operation, psd_info};
+use crate::args::{Commands, PluginCommands};
+use crate::editing::{
+    AiPreset, apply_pipeline_with_plugins, list_operations, list_plugins, parse_operation, psd_info,
+};
 use crate::integrations::gui::run_gui;
 use crate::integrations::mcp::run_mcp_server;
 use crate::integrations::video::{
@@ -16,27 +18,32 @@ pub fn run(command: Commands) -> Result<()> {
             ai,
             copilot_suggest,
             gpu,
+            plugins,
+            plugin_dirs,
         } => {
             let parsed_ops = ops
                 .iter()
                 .map(|op| parse_operation(op))
                 .collect::<Result<Vec<_>>>()?;
             let ai_preset = ai.as_deref().map(AiPreset::parse).transpose()?;
-            let effective = apply_pipeline(
+            let effective = apply_pipeline_with_plugins(
                 &input,
                 &output,
                 &parsed_ops,
                 ai_preset,
                 copilot_suggest,
                 gpu,
+                &plugins,
+                &plugin_dirs,
             )?;
             println!(
                 "Saved {} with {} operation(s): {}",
                 output.display(),
-                effective.len(),
+                effective.len() + plugins.len(),
                 effective
                     .iter()
                     .map(ToString::to_string)
+                    .chain(plugins.iter().map(|id| format!("plugin:{id}")))
                     .collect::<Vec<_>>()
                     .join(" -> ")
             );
@@ -94,5 +101,24 @@ pub fn run(command: Commands) -> Result<()> {
             println!("{info}");
             Ok(())
         }
+        Commands::Plugins { command } => match command {
+            PluginCommands::List { plugin_dirs } => {
+                let plugins = list_plugins(&plugin_dirs)?;
+                if plugins.is_empty() {
+                    println!("No JavaScript plugins found.");
+                } else {
+                    for plugin in plugins {
+                        println!(
+                            "{}\t{}\t{}\t{}",
+                            plugin.id,
+                            plugin.name,
+                            plugin.version,
+                            plugin.path.display()
+                        );
+                    }
+                }
+                Ok(())
+            }
+        },
     }
 }

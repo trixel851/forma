@@ -9,6 +9,7 @@
 - **Photoshop (`.psd`) input support**
 - **RAW decode fallback**
 - **Local AI + Copilot-style smart suggestions**
+- **JavaScript image plugins** with a bounded QuickJS runtime
 
 It is designed as a serious foundation toward Lightroom/Premiere/Photoshop-class workflows while remaining lightweight and hackable.
 
@@ -99,6 +100,13 @@ cargo run -- video \
 # Show available image operations
 cargo run -- ops
 
+# List JavaScript plugins
+cargo run -- plugins list
+
+# Apply plugins after built-in operations
+cargo run -- cli --input in.jpg --output out.png \
+  --op exposure:0.5 --plugin warm-glow --plugin soft-matte
+
 # PSD metadata probe
 cargo run -- psd-info --input shot.psd
 
@@ -146,6 +154,29 @@ Resize filters: `nearest`, `triangle`, `catmullrom`, `gaussian`, `lanczos3`
 - `copilot-smart`
 
 These run locally as deterministic operation stacks.
+
+## JavaScript plugins
+
+Plugins are self-contained `.js` files. Forma discovers them in `./plugins`, the per-user configuration plugin directory, and any extra directories passed with `--plugin-dir`. The `plugins list` command validates each plugin and prints its ID, name, version, and path. Enable plugins in the GUI's JavaScript plugins panel, pass one or more `--plugin <id>` options to the photo CLI, or call the MCP `list_plugins` and `apply_pipeline` tools.
+
+Example:
+
+```js
+globalThis.formaPlugin = {
+    id: "warm-glow",
+    name: "Warm Glow",
+    version: "1.0.0",
+    apply(image) {
+        // image.data is a Uint8ClampedArray in RGBA order.
+        for (let i = 0; i < image.data.length; i += 4) {
+            image.data[i] = Math.min(255, image.data[i] + 14);
+        }
+        return image;
+    }
+};
+```
+
+The plugin contract preserves `image.width` and `image.height`; plugins may edit `image.data` in place and must return the image object. Pixels are 8-bit RGBA. Plugins run locally in an isolated QuickJS context without host filesystem, network, or process APIs, with source, memory, stack, and execution-time limits. Treat plugins as executable code and install only scripts you trust. Two example plugins are included in `plugins/`.
 
 ## GPU acceleration
 

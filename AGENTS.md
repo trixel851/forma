@@ -4,8 +4,9 @@
 
 - `src/args.rs` defines CLI commands and options.
 - `src/app.rs` dispatches commands.
-- `src/editing/` contains image IO, operations, the edit pipeline, AI presets, and optional GPU compute.
+- `src/editing/` contains image IO, operations, the edit pipeline, AI presets, JavaScript plugins, and optional GPU compute.
 - `src/integrations/` contains the GUI, MCP server, and ffmpeg video support.
+- `plugins/` contains sample JavaScript image plugins.
 - `scripts/` contains host build and per-user install/uninstall scripts.
 
 ## Development
@@ -20,5 +21,6 @@
 ## Editing conventions
 
 - Keep image operations composable through `editing::Operation` and update its parser, CLI help, tests, and README when adding operations.
+- Keep JavaScript plugins self-contained and bounded by the QuickJS sandbox limits; do not expose host filesystem, network, or process APIs.
 - Prefer standard-library-only Python for build and install tooling.
 - Keep integrations modular; do not move CLI, GUI, MCP, image, and video logic into `main.rs`.
