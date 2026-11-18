@@ -1,6 +1,7 @@
 use crate::editing::ai::{AiPreset, ai_operations, recommend_copilot_pipeline};
 use crate::editing::io::load_image_with_psd_and_raw_support;
 use crate::editing::ops::{Operation, apply_operation};
+use crate::editing::plugins::apply_plugins;
 use anyhow::{Context, Result, anyhow};
 use image::DynamicImage;
 use std::path::Path;
@@ -36,13 +37,15 @@ fn apply_operations(
     Ok(image)
 }
 
-pub fn apply_pipeline(
+pub fn apply_pipeline_with_plugins(
     input: &Path,
     output: &Path,
     ops: &[Operation],
     ai: Option<AiPreset>,
     copilot_suggest: bool,
     use_gpu: bool,
+    plugin_ids: &[String],
+    plugin_dirs: &[std::path::PathBuf],
 ) -> Result<Vec<Operation>> {
     if output
         .extension()
@@ -90,6 +93,8 @@ pub fn apply_pipeline(
 
     img = apply_operations(img, ops, gpu.as_ref(), &mut accelerated)?;
     effective.extend_from_slice(ops);
+
+    img = apply_plugins(img, plugin_ids, plugin_dirs)?;
 
     img.save(output)
         .with_context(|| format!("failed to save {}", output.display()))?;

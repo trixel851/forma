@@ -13,6 +13,16 @@ pub struct Cli {
 }
 
 #[derive(Subcommand)]
+pub enum PluginCommands {
+    /// List discovered JavaScript plugins
+    List {
+        /// Search an additional plugin directory (can be repeated)
+        #[arg(long = "plugin-dir")]
+        plugin_dirs: Vec<PathBuf>,
+    },
+}
+
+#[derive(Subcommand)]
 pub enum Commands {
     /// Headless photo editing pipeline
     Cli {
@@ -29,6 +39,12 @@ pub enum Commands {
         /// Run supported pixel adjustments on a GPU (requires a compatible adapter)
         #[arg(long)]
         gpu: bool,
+        /// Apply a discovered JavaScript plugin by ID (can be repeated)
+        #[arg(long = "plugin")]
+        plugins: Vec<String>,
+        /// Search an additional JavaScript plugin directory (can be repeated)
+        #[arg(long = "plugin-dir")]
+        plugin_dirs: Vec<PathBuf>,
     },
     /// Advanced video editing pipeline powered by ffmpeg
     Video {
@@ -92,5 +108,10 @@ pub enum Commands {
     PsdInfo {
         #[arg(long)]
         input: PathBuf,
+    },
+    /// Discover and manage JavaScript plugins
+    Plugins {
+        #[command(subcommand)]
+        command: PluginCommands,
     },
 }
